@@ -8,15 +8,18 @@ export const useTransactions = (user: User | null) =>
 {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() =>
   {
     if (!user)
     {
-      return () => setTransactions([]);
+      Promise.resolve().then(() => setInitialized(false));
+      Promise.resolve().then(() => setTransactions([]));
+      return;
     }
-
     Promise.resolve().then(() => setLoading(true));
+
 
     const q = query(collection(db, 'artifacts', appId, 'users', user.uid, 'transactions'));
     const unsubscribe = onSnapshot(q, (snapshot) =>
@@ -36,10 +39,12 @@ export const useTransactions = (user: User | null) =>
 
       setTransactions(data);
       setLoading(false);
+      setInitialized(true);
     }, (err) =>
     {
       console.error(err);
       setLoading(false);
+      setInitialized(true);
     });
 
     return () => unsubscribe();
@@ -114,5 +119,5 @@ export const useTransactions = (user: User | null) =>
     await Promise.all(batchPromises);
   };
 
-  return { transactions, loading, addTransaction, updateTransaction, revokeTransaction, linkTransactions, importTransactions };
+  return { transactions, loading, initialized, addTransaction, updateTransaction, revokeTransaction, linkTransactions, importTransactions };
 };

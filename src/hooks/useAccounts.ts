@@ -8,12 +8,15 @@ export const useAccounts = (user: User | null) =>
 {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() =>
   {
     if (!user)
     {
-      return () => setAccounts([]);
+      Promise.resolve().then(() => setInitialized(false));
+      Promise.resolve().then(() => setAccounts([]));
+      return;
     }
 
     Promise.resolve().then(() => setLoading(true));
@@ -23,10 +26,12 @@ export const useAccounts = (user: User | null) =>
     {
       setAccounts(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Account));
       setLoading(false);
+      setInitialized(true);
     }, (err) =>
     {
       console.error(err);
       setLoading(false);
+      setInitialized(true); // Even on error, we are "initialized" (with empty or old data)
     });
 
     return () => unsubscribe();
@@ -52,5 +57,5 @@ export const useAccounts = (user: User | null) =>
     });
   };
 
-  return { accounts, loading, addAccount, updateAccount };
+  return { accounts, loading, initialized, addAccount, updateAccount };
 };

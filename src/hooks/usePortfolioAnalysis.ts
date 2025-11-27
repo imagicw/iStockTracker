@@ -42,7 +42,7 @@ export const usePortfolioAnalysis = (
           stockName: tx.stockName || tx.stockCode,
           sharesHeld: 0,
           avgCost: 0,
-          currentPrice: prices[tx.stockCode] || tx.price,
+          currentPrice: prices[tx.stockCode] || 0,
           marketValue: 0,
           totalCost: 0,
           realizedPnL: 0,
