@@ -26,52 +26,61 @@ export const useStockData = () =>
     setLoading(true);
     try
     {
-      const today = new Date().toISOString().split('T')[0];
-      const cacheKey = 'STOCK_PRICES_CACHE';
+      const today = new Date().toISOString().split("T")[0];
+      const cacheKey = "STOCK_PRICES_CACHE";
       const cachedData = localStorage.getItem(cacheKey);
-      let cachedPrices: Record<string, number> = {};
-      let needsFetch = false;
+
+      let currentPrices: Record<string, number> = {};
+      let codesToFetch: string[] = stockCodes;
 
       if (cachedData)
       {
-        const { date, prices: savedPrices } = JSON.parse(cachedData);
-        if (date === today)
+        try
         {
-          cachedPrices = savedPrices;
-          // Check if all requested codes are in cache
-          const missingCodes = stockCodes.filter(code => savedPrices[code] === undefined);
-          if (missingCodes.length === 0)
+          const { date, prices: savedPrices } = JSON.parse(cachedData);
+          if (date === today)
           {
-            setPrices(savedPrices);
-            setLoading(false);
-            return true;
+            currentPrices = savedPrices || {};
+            // Only fetch codes that are not in the cache
+            codesToFetch = stockCodes.filter(
+              (code) => currentPrices[code] === undefined
+            );
           }
-          needsFetch = true;
-        } else
+        } catch (e)
         {
-          needsFetch = true;
+          console.error("Error parsing cached prices:", e);
         }
-      } else
-      {
-        needsFetch = true;
       }
 
-      if (needsFetch)
+      // If we have valid cached prices, update state immediately
+      if (Object.keys(currentPrices).length > 0)
       {
-        const response = await fetchStockPrices(stockCodes);
-        const newPrices: Record<string, number> = { ...cachedPrices }; // Start with existing cache
-
-        if (response && response.data)
-        {
-          Object.entries(response.data).forEach(([code, price]) =>
-          {
-            newPrices[code] = Number(price.toFixed(2));
-          });
-        }
-
-        setPrices(newPrices);
-        localStorage.setItem(cacheKey, JSON.stringify({ date: today, prices: newPrices }));
+        setPrices((prev) => ({ ...prev, ...currentPrices }));
       }
+
+      // If nothing to fetch, we are done
+      if (codesToFetch.length === 0)
+      {
+        setLoading(false);
+        return true;
+      }
+
+      const response = await fetchStockPrices(codesToFetch);
+      const newPrices: Record<string, number> = { ...currentPrices };
+
+      if (response && response.data)
+      {
+        Object.entries(response.data).forEach(([code, price]) =>
+        {
+          newPrices[code] = Number(price.toFixed(2));
+        });
+      }
+
+      setPrices(newPrices);
+      localStorage.setItem(
+        cacheKey,
+        JSON.stringify({ date: today, prices: newPrices })
+      );
 
       return true;
     } catch (e)
