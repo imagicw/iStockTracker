@@ -1588,7 +1588,7 @@ export default function StockTracker() {
         onRestore={handleRestoreData}
       />
 
-      {(globalLoading || pricesLoading) && <LoadingOverlay />}
+      {globalLoading && <LoadingOverlay />}
       {toast && (
         <ToastMessage
           message={toast.message}
