@@ -1,9 +1,12 @@
 {
-  "version": 2,
   "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "https://api.awo.design/$1"
+      "source": "/api/(.*)",
+      "destination": "https://api.awo.design/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
