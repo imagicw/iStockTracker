@@ -202,7 +202,7 @@ export default function StockTracker() {
 
   const handleUpdatePrices = async () => {
     const codes = activePositions.map((p) => p.stockCode);
-    const success = await updatePrices(codes);
+    const success = await updatePrices(codes, true);
     if (success) showMessage("股价已更新", "success");
     else showMessage("更新股价失败", "error");
   };

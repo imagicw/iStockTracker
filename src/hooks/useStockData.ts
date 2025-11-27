@@ -21,7 +21,7 @@ export const useStockData = () =>
   });
   const [loading, setLoading] = useState(false);
 
-  const updatePrices = async (stockCodes: string[]) =>
+  const updatePrices = async (stockCodes: string[], forceRefresh = false) =>
   {
     setLoading(true);
     try
@@ -33,7 +33,7 @@ export const useStockData = () =>
       let currentPrices: Record<string, number> = {};
       let codesToFetch: string[] = stockCodes;
 
-      if (cachedData)
+      if (!forceRefresh && cachedData)
       {
         try
         {
@@ -52,8 +52,8 @@ export const useStockData = () =>
         }
       }
 
-      // If we have valid cached prices, update state immediately
-      if (Object.keys(currentPrices).length > 0)
+      // If we have valid cached prices and not forcing refresh, update state immediately
+      if (!forceRefresh && Object.keys(currentPrices).length > 0)
       {
         setPrices((prev) => ({ ...prev, ...currentPrices }));
       }
