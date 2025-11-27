@@ -48,6 +48,7 @@ import LinkTransactionModal from "./components/modals/LinkTransactionModal";
 import ImportModal from "./components/modals/ImportModal";
 import BackupRestoreModal from "./components/modals/BackupRestoreModal";
 import StockStrategyModal from "./components/modals/StockStrategyModal";
+import Pagination from "./components/Pagination";
 
 // Types & Utils
 import type {
@@ -112,6 +113,14 @@ export default function StockTracker() {
     groupTag: "",
   });
 
+  // Pagination State
+  const [analysisPage, setAnalysisPage] = useState(1);
+  const [analysisPageSize, setAnalysisPageSize] = useState(20);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPageSize, setHistoryPageSize] = useState(20);
+  const [transactionsPage, setTransactionsPage] = useState(1);
+  const [transactionsPageSize, setTransactionsPageSize] = useState(20);
+
   const [editingPrice, setEditingPrice] = useState<{
     stockCode: string;
     currentPrice: string;
@@ -155,6 +164,7 @@ export default function StockTracker() {
     totalUnrealizedPnL,
     totalRealizedPnL,
     uniqueStocks,
+    activePositions,
   } = usePortfolioAnalysis(transactions, accounts, prices, selectedAccountId);
 
   // --- Derived State ---
@@ -179,11 +189,11 @@ export default function StockTracker() {
   // --- Auto Update Prices ---
   const hasCheckedPrices = useRef(false);
   useEffect(() => {
-    if (user && uniqueStocks.length > 0 && !hasCheckedPrices.current) {
-      updatePrices(uniqueStocks.map((s) => s.code));
+    if (user && activePositions.length > 0 && !hasCheckedPrices.current) {
+      updatePrices(activePositions.map((s) => s.stockCode));
       hasCheckedPrices.current = true;
     }
-  }, [user, uniqueStocks, updatePrices]);
+  }, [user, activePositions, updatePrices]);
 
   // --- Handlers ---
   const showMessage = (message: string, type: ToastType = "info") => {
@@ -191,7 +201,7 @@ export default function StockTracker() {
   };
 
   const handleUpdatePrices = async () => {
-    const codes = Object.keys(portfolio);
+    const codes = activePositions.map((p) => p.stockCode);
     const success = await updatePrices(codes);
     if (success) showMessage("股价已更新", "success");
     else showMessage("更新股价失败", "error");
@@ -965,51 +975,63 @@ export default function StockTracker() {
                         </td>
                       </tr>
                     ) : (
-                      stockStrategyAnalysis.map((s) => (
-                        <tr
-                          key={s.stockCode}
-                          className="hover:bg-gray-50 cursor-pointer"
-                          onClick={() => setSelectedStrategyStock(s)}
-                        >
-                          <td className="px-6 py-4">
-                            <div className="font-medium text-gray-900">
-                              {s.stockName}
-                            </div>
-                            <div className="text-xs text-gray-400">
-                              {s.stockCode}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <span className="bg-blue-100 text-blue-600 px-2 py-1 rounded-full text-xs font-medium">
-                              {s.groups.length}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right text-gray-600">
-                            {formatCurrency(s.totalBuyCost)}
-                          </td>
-                          <td className="px-6 py-4 text-right text-gray-600">
-                            {formatCurrency(s.totalSellRevenue)}
-                          </td>
-                          <td className="px-6 py-4 text-right font-bold text-base">
-                            <PnLText value={s.netProfit} />
-                          </td>
-                          <td
-                            className={`px-6 py-4 text-right font-mono ${s.roi >= 0 ? "text-red-600" : "text-green-600"}`}
+                      stockStrategyAnalysis
+                        .slice(
+                          (analysisPage - 1) * analysisPageSize,
+                          analysisPage * analysisPageSize
+                        )
+                        .map((s) => (
+                          <tr
+                            key={s.stockCode}
+                            className="hover:bg-gray-50 cursor-pointer"
+                            onClick={() => setSelectedStrategyStock(s)}
                           >
-                            {s.roi > 0 ? "+" : ""}
-                            {s.roi.toFixed(2)}%
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <button className="text-blue-600 hover:bg-blue-50 p-1 rounded-full">
-                              <ChevronRight size={18} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))
+                            <td className="px-6 py-4">
+                              <div className="font-medium text-gray-900">
+                                {s.stockName}
+                              </div>
+                              <div className="text-xs text-gray-400">
+                                {s.stockCode}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <span className="bg-blue-100 text-blue-600 px-2 py-1 rounded-full text-xs font-medium">
+                                {s.groups.length}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-right text-gray-600">
+                              {formatCurrency(s.totalBuyCost)}
+                            </td>
+                            <td className="px-6 py-4 text-right text-gray-600">
+                              {formatCurrency(s.totalSellRevenue)}
+                            </td>
+                            <td className="px-6 py-4 text-right font-bold text-base">
+                              <PnLText value={s.netProfit} />
+                            </td>
+                            <td
+                              className={`px-6 py-4 text-right font-mono ${s.roi >= 0 ? "text-red-600" : "text-green-600"}`}
+                            >
+                              {s.roi > 0 ? "+" : ""}
+                              {s.roi.toFixed(2)}%
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <button className="text-blue-600 hover:bg-blue-50 p-1 rounded-full">
+                                <ChevronRight size={18} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
                     )}
                   </tbody>
                 </table>
               </div>
+              <Pagination
+                currentPage={analysisPage}
+                totalItems={stockStrategyAnalysis.length}
+                pageSize={analysisPageSize}
+                onPageChange={setAnalysisPage}
+                onPageSizeChange={setAnalysisPageSize}
+              />
             </div>
           )}
 
@@ -1049,39 +1071,51 @@ export default function StockTracker() {
                         </td>
                       </tr>
                     ) : (
-                      clearedPositionsSorted.map((pos) => (
-                        <tr key={pos.stockCode} className="hover:bg-gray-50">
-                          <td
-                            className={`px-6 py-4 bg-white group-hover:bg-gray-50 ${stickyLeftFirst}`}
-                          >
-                            <div className="font-medium text-gray-900">
-                              {pos.stockName}
-                            </div>
-                            <div className="text-xs text-gray-400">
-                              {pos.stockCode}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-right text-gray-600">
-                            {pos.lastUpdate}
-                          </td>
-                          <td className="px-6 py-4 text-right text-gray-500">
-                            {formatNumber(pos.totalFees)}
-                          </td>
-                          <td className="px-6 py-4 text-right font-mono text-green-600">
-                            {formatNumber(pos.totalInterest)}
-                          </td>
-                          <td className="px-6 py-4 text-right font-mono text-amber-600">
-                            {formatNumber(pos.totalDividend)}
-                          </td>
-                          <td className="px-6 py-4 text-right font-bold text-base">
-                            <PnLText value={pos.realizedPnL} />
-                          </td>
-                        </tr>
-                      ))
+                      clearedPositionsSorted
+                        .slice(
+                          (historyPage - 1) * historyPageSize,
+                          historyPage * historyPageSize
+                        )
+                        .map((pos) => (
+                          <tr key={pos.stockCode} className="hover:bg-gray-50">
+                            <td
+                              className={`px-6 py-4 bg-white group-hover:bg-gray-50 ${stickyLeftFirst}`}
+                            >
+                              <div className="font-medium text-gray-900">
+                                {pos.stockName}
+                              </div>
+                              <div className="text-xs text-gray-400">
+                                {pos.stockCode}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-right text-gray-600">
+                              {pos.lastUpdate}
+                            </td>
+                            <td className="px-6 py-4 text-right text-gray-500">
+                              {formatNumber(pos.totalFees)}
+                            </td>
+                            <td className="px-6 py-4 text-right font-mono text-green-600">
+                              {formatNumber(pos.totalInterest)}
+                            </td>
+                            <td className="px-6 py-4 text-right font-mono text-amber-600">
+                              {formatNumber(pos.totalDividend)}
+                            </td>
+                            <td className="px-6 py-4 text-right font-bold text-base">
+                              <PnLText value={pos.realizedPnL} />
+                            </td>
+                          </tr>
+                        ))
                     )}
                   </tbody>
                 </table>
               </div>
+              <Pagination
+                currentPage={historyPage}
+                totalItems={clearedPositionsSorted.length}
+                pageSize={historyPageSize}
+                onPageChange={setHistoryPage}
+                onPageSizeChange={setHistoryPageSize}
+              />
             </div>
           )}
 
@@ -1121,6 +1155,10 @@ export default function StockTracker() {
                         (t) =>
                           selectedAccountId === "all" ||
                           t.accountId === selectedAccountId
+                      )
+                      .slice(
+                        (transactionsPage - 1) * transactionsPageSize,
+                        transactionsPage * transactionsPageSize
                       )
                       .map((tx) => {
                         const isBuy = tx.type === "BUY";
@@ -1258,6 +1296,19 @@ export default function StockTracker() {
                   </tbody>
                 </table>
               </div>
+              <Pagination
+                currentPage={transactionsPage}
+                totalItems={
+                  transactions.filter(
+                    (t) =>
+                      selectedAccountId === "all" ||
+                      t.accountId === selectedAccountId
+                  ).length
+                }
+                pageSize={transactionsPageSize}
+                onPageChange={setTransactionsPage}
+                onPageSizeChange={setTransactionsPageSize}
+              />
             </div>
           )}
 
