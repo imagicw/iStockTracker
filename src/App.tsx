@@ -1,23 +1,14 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   PlusCircle,
-  MinusCircle,
-  XCircle,
   TrendingUp,
-  History,
   Wallet,
-  RefreshCw,
-  RotateCcw,
   DollarSign,
   ArrowUpRight,
   ArrowDownRight,
   Filter,
   PieChart,
-  Edit2,
-  Search,
   Layers,
-  Link,
-  ChevronRight,
   Database,
   Download,
   Upload,
@@ -33,12 +24,9 @@ import { db, appId } from "./lib/firebase";
 import { useStockData } from "./hooks/useStockData";
 import { usePortfolioAnalysis } from "./hooks/usePortfolioAnalysis";
 
-// Components
 import Login from "./components/Login";
-import PnLText from "./components/PnLText";
 import LoadingOverlay from "./components/LoadingOverlay";
 import ToastMessage from "./components/ToastMessage";
-import SortableHeader from "./components/SortableHeader";
 
 // Modals
 import AccountCreationModal from "./components/modals/AccountCreationModal";
@@ -48,7 +36,14 @@ import LinkTransactionModal from "./components/modals/LinkTransactionModal";
 import ImportModal from "./components/modals/ImportModal";
 import BackupRestoreModal from "./components/modals/BackupRestoreModal";
 import StockStrategyModal from "./components/modals/StockStrategyModal";
-import Pagination from "./components/Pagination";
+
+// Tab Components
+import Holdings from "./components/tabs/Holdings";
+import Analysis from "./components/tabs/Analysis";
+import History from "./components/tabs/History";
+import Transactions from "./components/tabs/Transactions";
+import StockDetails from "./components/tabs/StockDetails";
+import Accounts from "./components/tabs/Accounts";
 
 // Types & Utils
 import type {
@@ -58,7 +53,7 @@ import type {
   StockStrategyStats,
   ToastType,
 } from "./types";
-import { formatCurrency, formatNumber, formatDateForInput } from "./utils";
+import { formatCurrency, formatDateForInput } from "./utils";
 
 export default function StockTracker() {
   // --- Auth ---
@@ -561,13 +556,6 @@ export default function StockTracker() {
     showMessage(`已导出 ${dataToExport.length} 条记录`, "success");
   };
 
-  const stickyLeftFirst =
-    "sticky left-0 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] w-40";
-  const stickyLeftSecond =
-    "sticky left-40 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] w-28 border-l border-gray-100";
-  const stickyRightLast =
-    "sticky right-0 z-20 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]";
-
   if (authLoading) return <LoadingOverlay />;
   if (!user) return <Login />;
   if (!accountsInitialized || !transactionsInitialized)
@@ -716,7 +704,7 @@ export default function StockTracker() {
         <div className="flex space-x-1 bg-gray-200 p-1 rounded-lg mb-6 w-fit">
           {[
             { id: "holdings", label: "当前持仓", icon: Wallet },
-            { id: "history", label: "清仓历史", icon: History },
+            { id: "history", label: "清仓历史", icon: Layers }, // Changed icon to Layers as History was removed, or keep History if I re-add it. Wait, History was removed from imports. Let's check imports.
             { id: "analysis", label: "T操作/策略", icon: Layers },
             { id: "transactions", label: "交易明细", icon: Filter },
             { id: "stock_details", label: "个股透视", icon: FileText },
@@ -741,789 +729,79 @@ export default function StockTracker() {
         <div className="bg-white rounded-xl shadow-sm min-h-[400px] border border-gray-100 overflow-hidden">
           {/* VIEW: HOLDINGS */}
           {activeTab === "holdings" && (
-            <div className="p-0">
-              <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50/50">
-                <h2 className="font-semibold text-gray-700">持仓列表</h2>
-                <button
-                  onClick={handleUpdatePrices}
-                  disabled={pricesLoading}
-                  className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50"
-                >
-                  <RefreshCw
-                    size={14}
-                    className={pricesLoading ? "animate-spin" : ""}
-                  />
-                  <span>{pricesLoading ? "更新中..." : "更新现价"}</span>
-                </button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left min-w-max">
-                  <thead className="bg-gray-50 text-gray-500 font-medium">
-                    <tr>
-                      <SortableHeader
-                        label="名称/代码"
-                        sortKey="stockCode"
-                        currentSort={holdingsSort}
-                        onSort={handleHoldingsSort}
-                        align="left"
-                        className={`${stickyLeftFirst}`}
-                      />
-                      <SortableHeader
-                        label="持仓"
-                        sortKey="sharesHeld"
-                        currentSort={holdingsSort}
-                        onSort={handleHoldingsSort}
-                        className={`${stickyLeftSecond}`}
-                      />
-                      <th className="px-6 py-3 text-right">现价</th>
-                      <th className="px-6 py-3 text-right">成本价</th>
-                      <SortableHeader
-                        label="市值"
-                        sortKey="marketValue"
-                        currentSort={holdingsSort}
-                        onSort={handleHoldingsSort}
-                      />
-                      <th className="px-6 py-3 text-right">浮动盈亏</th>
-                      <th className="px-6 py-3 text-right">区间收益(T)</th>
-                      <th className="px-6 py-3 text-right">盈亏比例</th>
-                      <th
-                        className={`px-6 py-3 text-center bg-gray-50 ${stickyRightLast}`}
-                      >
-                        操作
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {activePositionsSorted.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={9}
-                          className="px-6 py-12 text-center text-gray-400"
-                        >
-                          暂无持仓，快去开仓吧
-                        </td>
-                      </tr>
-                    ) : (
-                      activePositionsSorted.map((pos) => {
-                        const roi =
-                          pos.totalCost !== 0
-                            ? (pos.unrealizedPnL / pos.totalCost) * 100
-                            : 0;
-                        return (
-                          <tr
-                            key={pos.stockCode}
-                            className="hover:bg-gray-50 transition group"
-                          >
-                            <td
-                              className={`px-6 py-4 bg-white group-hover:bg-gray-50 ${stickyLeftFirst}`}
-                            >
-                              <div className="font-medium text-gray-900">
-                                {pos.stockName}
-                              </div>
-                              <div className="text-xs text-gray-400">
-                                {pos.stockCode}
-                              </div>
-                            </td>
-                            <td
-                              className={`px-6 py-4 text-right font-mono bg-white group-hover:bg-gray-50 ${stickyLeftSecond}`}
-                            >
-                              {pos.sharesHeld}
-                            </td>
-                            <td className="px-6 py-4 text-right font-mono text-gray-700">
-                              {editingPrice?.stockCode === pos.stockCode ? (
-                                <input
-                                  type="number"
-                                  className="w-20 text-right border rounded px-1 py-0.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                  value={editingPrice.currentPrice}
-                                  onChange={(e) =>
-                                    setEditingPrice({
-                                      ...editingPrice,
-                                      currentPrice: e.target.value,
-                                    })
-                                  }
-                                  onBlur={() => {
-                                    if (editingPrice.currentPrice) {
-                                      setPrice(
-                                        pos.stockCode,
-                                        parseFloat(editingPrice.currentPrice)
-                                      );
-                                    }
-                                    setEditingPrice(null);
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                      if (editingPrice.currentPrice) {
-                                        setPrice(
-                                          pos.stockCode,
-                                          parseFloat(editingPrice.currentPrice)
-                                        );
-                                      }
-                                      setEditingPrice(null);
-                                    }
-                                  }}
-                                  autoFocus
-                                />
-                              ) : (
-                                <span
-                                  className="cursor-pointer hover:text-blue-600 hover:underline decoration-dashed underline-offset-4"
-                                  onClick={() =>
-                                    setEditingPrice({
-                                      stockCode: pos.stockCode,
-                                      currentPrice: pos.currentPrice.toString(),
-                                    })
-                                  }
-                                  title="点击修改现价"
-                                >
-                                  {formatNumber(pos.currentPrice)}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 text-right font-mono text-gray-500">
-                              {formatNumber(pos.avgCost)}
-                            </td>
-                            <td className="px-6 py-4 text-right font-mono font-medium">
-                              {formatCurrency(pos.marketValue)}
-                            </td>
-                            <td className="px-6 py-4 text-right font-mono">
-                              <PnLText value={pos.unrealizedPnL} />
-                            </td>
-                            <td className="px-6 py-4 text-right font-mono">
-                              <div className="flex flex-col items-end">
-                                <PnLText value={pos.realizedPnL} />
-                                <span className="text-[10px] text-gray-400">
-                                  已落袋
-                                </span>
-                              </div>
-                            </td>
-                            <td
-                              className={`px-6 py-4 text-right font-mono font-medium ${roi >= 0 ? "text-red-500" : "text-green-500"}`}
-                            >
-                              {roi >= 0 ? "+" : ""}
-                              {roi.toFixed(2)}%
-                            </td>
-                            <td
-                              className={`px-6 py-4 bg-white group-hover:bg-gray-50 ${stickyRightLast}`}
-                            >
-                              <div className="flex justify-center space-x-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                                <button
-                                  onClick={() => handleQuickAction("BUY", pos)}
-                                  className="p-1.5 rounded-full text-blue-600 bg-blue-100 hover:bg-blue-200 transition"
-                                  title="加仓"
-                                >
-                                  <PlusCircle size={16} />
-                                </button>
-                                <button
-                                  onClick={() => handleQuickAction("SELL", pos)}
-                                  className="p-1.5 rounded-full text-orange-600 bg-orange-100 hover:bg-orange-200 transition"
-                                  title="减仓"
-                                >
-                                  <MinusCircle size={16} />
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    handleQuickAction("CLEAR", pos)
-                                  }
-                                  className="p-1.5 rounded-full text-red-600 bg-red-100 hover:bg-red-200 transition"
-                                  title="一键清仓"
-                                >
-                                  <XCircle size={16} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <Holdings
+              pricesLoading={pricesLoading}
+              handleUpdatePrices={handleUpdatePrices}
+              holdingsSort={holdingsSort}
+              handleHoldingsSort={handleHoldingsSort}
+              activePositionsSorted={activePositionsSorted}
+              editingPrice={editingPrice}
+              setEditingPrice={setEditingPrice}
+              setPrice={setPrice}
+              handleQuickAction={handleQuickAction}
+            />
           )}
 
           {/* VIEW: ANALYSIS (Grouped by Stock) */}
           {activeTab === "analysis" && (
-            <div>
-              <div className="px-6 py-4 border-b bg-gray-50/50 flex justify-between items-center">
-                <h2 className="font-semibold text-gray-700">
-                  T操作 / 策略汇总 (按股票)
-                </h2>
-                <div className="text-xs text-gray-500">
-                  点击股票查看策略明细
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left min-w-max">
-                  <thead className="bg-gray-50 text-gray-500 font-medium">
-                    <tr>
-                      <th className="px-6 py-3">股票</th>
-                      <th className="px-6 py-3 text-center">策略分组数量</th>
-                      <th className="px-6 py-3 text-right">总投入成本</th>
-                      <th className="px-6 py-3 text-right">总回笼资金</th>
-                      <th className="px-6 py-3 text-right">总净利润</th>
-                      <th className="px-6 py-3 text-right">平均收益率</th>
-                      <th className="px-6 py-3 text-center">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {stockStrategyAnalysis.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={7}
-                          className="px-6 py-12 text-center text-gray-400"
-                        >
-                          暂无分组数据，请在交易中添加"分组标记"
-                        </td>
-                      </tr>
-                    ) : (
-                      stockStrategyAnalysis
-                        .slice(
-                          (analysisPage - 1) * analysisPageSize,
-                          analysisPage * analysisPageSize
-                        )
-                        .map((s) => (
-                          <tr
-                            key={s.stockCode}
-                            className="hover:bg-gray-50 cursor-pointer"
-                            onClick={() => setSelectedStrategyStock(s)}
-                          >
-                            <td className="px-6 py-4">
-                              <div className="font-medium text-gray-900">
-                                {s.stockName}
-                              </div>
-                              <div className="text-xs text-gray-400">
-                                {s.stockCode}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                              <span className="bg-blue-100 text-blue-600 px-2 py-1 rounded-full text-xs font-medium">
-                                {s.groups.length}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-right text-gray-600">
-                              {formatCurrency(s.totalBuyCost)}
-                            </td>
-                            <td className="px-6 py-4 text-right text-gray-600">
-                              {formatCurrency(s.totalSellRevenue)}
-                            </td>
-                            <td className="px-6 py-4 text-right font-bold text-base">
-                              <PnLText value={s.netProfit} />
-                            </td>
-                            <td
-                              className={`px-6 py-4 text-right font-mono ${s.roi >= 0 ? "text-red-600" : "text-green-600"}`}
-                            >
-                              {s.roi > 0 ? "+" : ""}
-                              {s.roi.toFixed(2)}%
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                              <button className="text-blue-600 hover:bg-blue-50 p-1 rounded-full">
-                                <ChevronRight size={18} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              <Pagination
-                currentPage={analysisPage}
-                totalItems={stockStrategyAnalysis.length}
-                pageSize={analysisPageSize}
-                onPageChange={setAnalysisPage}
-                onPageSizeChange={setAnalysisPageSize}
-              />
-            </div>
+            <Analysis
+              stockStrategyAnalysis={stockStrategyAnalysis}
+              analysisPage={analysisPage}
+              analysisPageSize={analysisPageSize}
+              setAnalysisPage={setAnalysisPage}
+              setAnalysisPageSize={setAnalysisPageSize}
+              setSelectedStrategyStock={setSelectedStrategyStock}
+            />
           )}
 
           {/* VIEW: HISTORY */}
           {activeTab === "history" && (
-            <div>
-              <div className="px-6 py-4 border-b bg-gray-50/50">
-                <h2 className="font-semibold text-gray-700">已清仓历史战绩</h2>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left min-w-max">
-                  <thead className="bg-gray-50 text-gray-500 font-medium">
-                    <tr>
-                      <th className={`px-6 py-3 bg-gray-50 ${stickyLeftFirst}`}>
-                        股票
-                      </th>
-                      <th className="px-6 py-3 text-right">最后操作日</th>
-                      <th className="px-6 py-3 text-right">累计交易费</th>
-                      <th className="px-6 py-3 text-right">累计融资利息</th>
-                      <th className="px-6 py-3 text-right">累计分红</th>
-                      <SortableHeader
-                        label="最终净盈亏"
-                        sortKey="realizedPnL"
-                        currentSort={historySort}
-                        onSort={handleHistorySort}
-                      />
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {clearedPositionsSorted.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={6}
-                          className="px-6 py-12 text-center text-gray-400"
-                        >
-                          暂无清仓记录
-                        </td>
-                      </tr>
-                    ) : (
-                      clearedPositionsSorted
-                        .slice(
-                          (historyPage - 1) * historyPageSize,
-                          historyPage * historyPageSize
-                        )
-                        .map((pos) => (
-                          <tr key={pos.stockCode} className="hover:bg-gray-50">
-                            <td
-                              className={`px-6 py-4 bg-white group-hover:bg-gray-50 ${stickyLeftFirst}`}
-                            >
-                              <div className="font-medium text-gray-900">
-                                {pos.stockName}
-                              </div>
-                              <div className="text-xs text-gray-400">
-                                {pos.stockCode}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 text-right text-gray-600">
-                              {pos.lastUpdate}
-                            </td>
-                            <td className="px-6 py-4 text-right text-gray-500">
-                              {formatNumber(pos.totalFees)}
-                            </td>
-                            <td className="px-6 py-4 text-right font-mono text-green-600">
-                              {formatNumber(pos.totalInterest)}
-                            </td>
-                            <td className="px-6 py-4 text-right font-mono text-amber-600">
-                              {formatNumber(pos.totalDividend)}
-                            </td>
-                            <td className="px-6 py-4 text-right font-bold text-base">
-                              <PnLText value={pos.realizedPnL} />
-                            </td>
-                          </tr>
-                        ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              <Pagination
-                currentPage={historyPage}
-                totalItems={clearedPositionsSorted.length}
-                pageSize={historyPageSize}
-                onPageChange={setHistoryPage}
-                onPageSizeChange={setHistoryPageSize}
-              />
-            </div>
+            <History
+              clearedPositionsSorted={clearedPositionsSorted}
+              historyPage={historyPage}
+              historyPageSize={historyPageSize}
+              setHistoryPage={setHistoryPage}
+              setHistoryPageSize={setHistoryPageSize}
+              historySort={historySort}
+              handleHistorySort={handleHistorySort}
+            />
           )}
 
           {/* VIEW: TRANSACTIONS */}
           {activeTab === "transactions" && (
-            <div>
-              <div className="px-6 py-4 border-b bg-gray-50/50 flex justify-between">
-                <h2 className="font-semibold text-gray-700">交易流水明细</h2>
-                <div className="text-xs text-gray-400 flex items-center">
-                  按时间倒序排列
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left min-w-max">
-                  <thead className="bg-gray-50 text-gray-500 font-medium">
-                    <tr>
-                      <th className={`px-4 py-3 bg-gray-50 ${stickyLeftFirst}`}>
-                        日期
-                      </th>
-                      <th className="px-4 py-3">账户</th>
-                      <th className="px-4 py-3">操作</th>
-                      <th className="px-4 py-3">标的</th>
-                      <th className="px-4 py-3 text-right">价格/金额</th>
-                      <th className="px-4 py-3 text-right">数量</th>
-                      <th className="px-4 py-3 text-right">税费</th>
-                      <th className="px-4 py-3 text-right">发生金额</th>
-                      <th
-                        className={`px-4 py-3 text-center bg-gray-50 ${stickyRightLast}`}
-                      >
-                        状态/操作
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {transactions
-                      .filter(
-                        (t) =>
-                          selectedAccountId === "all" ||
-                          t.accountId === selectedAccountId
-                      )
-                      .slice(
-                        (transactionsPage - 1) * transactionsPageSize,
-                        transactionsPage * transactionsPageSize
-                      )
-                      .map((tx) => {
-                        const isBuy = tx.type === "BUY";
-                        const isSell = tx.type === "SELL";
-                        const isInterest = tx.type === "INTEREST";
-                        const isDividend = tx.type === "DIVIDEND";
-                        const isRevoked = tx.status === "revoked";
-
-                        let amount = 0;
-                        if (isInterest || isDividend) {
-                          amount = tx.price;
-                        } else {
-                          amount = tx.price * tx.shares;
-                        }
-
-                        const totalFee =
-                          (tx.commission || 0) +
-                          (tx.tax || 0) +
-                          (tx.otherFees || 0);
-
-                        let badgeColor = "bg-gray-100 text-gray-600";
-                        if (isBuy) badgeColor = "bg-red-100 text-red-600";
-                        if (isSell) badgeColor = "bg-green-100 text-green-600";
-                        if (isDividend)
-                          badgeColor = "bg-yellow-100 text-yellow-700";
-                        if (isInterest)
-                          badgeColor = "bg-amber-100 text-amber-700";
-
-                        const rowOpacity = isRevoked
-                          ? "opacity-50 grayscale bg-gray-50"
-                          : "hover:bg-gray-50";
-                        const textDecoration = isRevoked
-                          ? "line-through decoration-gray-400"
-                          : "";
-
-                        return (
-                          <tr key={tx.id} className={`${rowOpacity} group`}>
-                            <td
-                              className={`px-4 py-3 text-gray-500 whitespace-nowrap ${isRevoked ? "bg-gray-50" : "bg-white"} group-hover:bg-gray-50 ${stickyLeftFirst}`}
-                            >
-                              {tx.date}
-                            </td>
-                            <td className="px-4 py-3 text-gray-500 text-xs">
-                              {accounts.find((a) => a.id === tx.accountId)
-                                ?.name || "未知"}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span
-                                className={`px-2 py-1 rounded text-xs font-medium ${badgeColor}`}
-                              >
-                                {isBuy
-                                  ? "买入"
-                                  : isSell
-                                    ? "卖出"
-                                    : isInterest
-                                      ? "利息"
-                                      : "分红"}
-                              </span>
-                            </td>
-                            <td
-                              className={`px-4 py-3 font-medium ${textDecoration}`}
-                            >
-                              {tx.stockName}{" "}
-                              <span className="text-gray-400 text-xs">
-                                ({tx.stockCode})
-                              </span>
-                              {tx.groupTag && (
-                                <span className="ml-1 text-[10px] bg-blue-100 text-blue-600 px-1 rounded">
-                                  {tx.groupTag}
-                                </span>
-                              )}
-                            </td>
-                            <td
-                              className={`px-4 py-3 text-right font-mono ${textDecoration}`}
-                            >
-                              {isInterest ? "-" : formatNumber(tx.price)}
-                            </td>
-                            <td
-                              className={`px-4 py-3 text-right font-mono ${textDecoration}`}
-                            >
-                              {isInterest ? "-" : tx.shares}
-                            </td>
-                            <td
-                              className={`px-4 py-3 text-right text-gray-400 text-xs ${textDecoration}`}
-                            >
-                              {isInterest ? "-" : formatNumber(totalFee)}
-                            </td>
-                            <td
-                              className={`px-4 py-3 text-right font-medium ${textDecoration} ${isInterest ? "text-amber-600" : ""}`}
-                            >
-                              {formatCurrency(amount)}
-                            </td>
-                            <td
-                              className={`px-4 py-3 text-center ${isRevoked ? "bg-gray-50" : "bg-white"} group-hover:bg-gray-50 ${stickyRightLast}`}
-                            >
-                              {isRevoked ? (
-                                <span className="text-xs font-bold text-gray-400 border border-gray-300 px-2 py-1 rounded">
-                                  已撤回
-                                </span>
-                              ) : (
-                                <div className="flex justify-center space-x-2">
-                                  {(tx.type === "BUY" ||
-                                    tx.type === "SELL") && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleLinkClick(tx)}
-                                      className="text-gray-500 hover:text-purple-600 transition p-1"
-                                      title="关联交易 / 标记 T"
-                                    >
-                                      <Link size={14} />
-                                    </button>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleEditTx(tx)}
-                                    className="text-gray-500 hover:text-blue-600 transition p-1"
-                                    title="编辑交易 / 分组"
-                                  >
-                                    <Edit2 size={14} />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRevokeClick(tx.id)}
-                                    className="text-gray-500 hover:text-orange-600 transition p-1"
-                                    title="撤回交易"
-                                  >
-                                    <RotateCcw size={14} />
-                                  </button>
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
-              </div>
-              <Pagination
-                currentPage={transactionsPage}
-                totalItems={
-                  transactions.filter(
-                    (t) =>
-                      selectedAccountId === "all" ||
-                      t.accountId === selectedAccountId
-                  ).length
-                }
-                pageSize={transactionsPageSize}
-                onPageChange={setTransactionsPage}
-                onPageSizeChange={setTransactionsPageSize}
-              />
-            </div>
+            <Transactions
+              transactions={transactions}
+              selectedAccountId={selectedAccountId}
+              transactionsPage={transactionsPage}
+              transactionsPageSize={transactionsPageSize}
+              setTransactionsPage={setTransactionsPage}
+              setTransactionsPageSize={setTransactionsPageSize}
+              accounts={accounts}
+              handleLinkClick={handleLinkClick}
+              handleEditTx={handleEditTx}
+              handleRevokeClick={handleRevokeClick}
+            />
           )}
 
           {/* VIEW: STOCK DETAILS */}
           {activeTab === "stock_details" && (
-            <div className="p-6 min-h-[500px]">
-              <div className="max-w-4xl mx-auto">
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6">
-                  <label className="text-sm font-medium text-gray-700 mb-2 flex items-center">
-                    <Search size={16} className="mr-2" />
-                    选择或搜索股票
-                  </label>
-                  <select
-                    className="w-full p-3 border rounded-lg bg-gray-50 font-medium"
-                    value={selectedStockCode}
-                    onChange={(e) => setSelectedStockCode(e.target.value)}
-                  >
-                    <option value="">-- 请选择要分析的股票 --</option>
-                    {uniqueStocks.map((s) => (
-                      <option key={s.code} value={s.code}>
-                        {s.name} ({s.code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {stockDetailsData ? (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="bg-blue-50 p-4 rounded-lg">
-                        <div className="text-xs text-blue-600 font-medium mb-1">
-                          累计盈亏 (已落袋)
-                        </div>
-                        <div className="text-xl font-bold text-blue-800">
-                          <PnLText
-                            value={stockDetailsData.position.realizedPnL}
-                          />
-                        </div>
-                      </div>
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <div className="text-xs text-gray-500 font-medium mb-1">
-                          累计交易费用
-                        </div>
-                        <div className="text-xl font-bold text-gray-700">
-                          {formatNumber(stockDetailsData.position.totalFees)}
-                        </div>
-                      </div>
-                      <div className="bg-amber-50 p-4 rounded-lg">
-                        <div className="text-xs text-amber-600 font-medium mb-1">
-                          累计融资利息
-                        </div>
-                        <div className="text-xl font-bold text-amber-700">
-                          {formatNumber(
-                            stockDetailsData.position.totalInterest
-                          )}
-                        </div>
-                      </div>
-                      <div className="bg-green-50 p-4 rounded-lg">
-                        <div className="text-xs text-green-600 font-medium mb-1">
-                          累计分红
-                        </div>
-                        <div className="text-xl font-bold text-green-700">
-                          {formatNumber(
-                            stockDetailsData.position.totalDividend
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                      <div className="px-6 py-4 border-b bg-gray-50/50 font-medium text-gray-700">
-                        交易明细 ({stockDetailsData.transactions.length} 笔)
-                      </div>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                          <thead className="bg-gray-50 text-gray-500">
-                            <tr>
-                              <th className="px-4 py-3">日期</th>
-                              <th className="px-4 py-3">操作</th>
-                              <th className="px-4 py-3 text-right">
-                                价格/金额
-                              </th>
-                              <th className="px-4 py-3 text-right">数量</th>
-                              <th className="px-4 py-3 text-right">发生金额</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100">
-                            {stockDetailsData.transactions.map((tx) => {
-                              const isBuy = tx.type === "BUY";
-                              const isSell = tx.type === "SELL";
-                              const isInterest = tx.type === "INTEREST";
-                              const isDividend = tx.type === "DIVIDEND";
-                              const amount =
-                                isInterest || isDividend
-                                  ? tx.price
-                                  : tx.price * tx.shares;
-
-                              let badgeColor = "bg-gray-100 text-gray-600";
-                              if (isBuy) badgeColor = "bg-red-100 text-red-600";
-                              if (isSell)
-                                badgeColor = "bg-green-100 text-green-600";
-                              if (isDividend)
-                                badgeColor = "bg-yellow-100 text-yellow-700";
-                              if (isInterest)
-                                badgeColor = "bg-amber-100 text-amber-700";
-
-                              return (
-                                <tr key={tx.id} className="hover:bg-gray-50">
-                                  <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
-                                    {tx.date}
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    <span
-                                      className={`px-2 py-1 rounded text-xs font-medium ${badgeColor}`}
-                                    >
-                                      {isBuy
-                                        ? "买入"
-                                        : isSell
-                                          ? "卖出"
-                                          : isInterest
-                                            ? "利息"
-                                            : "分红"}
-                                    </span>
-                                  </td>
-                                  <td className="px-4 py-3 text-right font-mono text-gray-600">
-                                    {isInterest ? "-" : formatNumber(tx.price)}
-                                  </td>
-                                  <td className="px-4 py-3 text-right font-mono text-gray-600">
-                                    {isInterest ? "-" : tx.shares}
-                                  </td>
-                                  <td
-                                    className={`px-4 py-3 text-right font-medium ${isInterest ? "text-amber-600" : ""}`}
-                                  >
-                                    {formatCurrency(amount)}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-12 text-gray-400">
-                    请选择一只股票以查看详细分析
-                  </div>
-                )}
-              </div>
-            </div>
+            <StockDetails
+              selectedStockCode={selectedStockCode}
+              setSelectedStockCode={setSelectedStockCode}
+              uniqueStocks={uniqueStocks}
+              stockDetailsData={stockDetailsData}
+            />
           )}
 
           {/* VIEW: ACCOUNTS */}
           {activeTab === "accounts" && (
-            <div className="p-8">
-              <div className="max-w-md mx-auto text-center space-y-6">
-                <div className="bg-blue-50 text-blue-800 p-4 rounded-lg text-sm">
-                  这里管理你的所有证券账户。不同的账户交易将被分开记录，但在首页可以查看汇总资产。
-                </div>
-                <div className="space-y-3">
-                  {accounts.map((acc) => (
-                    <div
-                      key={acc.id}
-                      className="flex justify-between items-center p-4 bg-white border shadow-sm rounded-lg hover:border-blue-300 transition cursor-pointer"
-                      onClick={() => setSelectedAccountId(acc.id)}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="bg-blue-100 p-2 rounded-full text-blue-600">
-                          <Wallet size={18} />
-                        </div>
-                        <div className="text-left">
-                          <div className="font-bold text-gray-800">
-                            {acc.name}
-                          </div>
-                          <div className="text-xs text-gray-400">
-                            期初盈亏:{" "}
-                            <span
-                              className={
-                                acc.initialRealizedPnL &&
-                                acc.initialRealizedPnL >= 0
-                                  ? "text-red-500"
-                                  : "text-green-500"
-                              }
-                            >
-                              {formatCurrency(acc.initialRealizedPnL || 0)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        {selectedAccountId === acc.id && (
-                          <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">
-                            当前选中
-                          </span>
-                        )}
-                        <button
-                          onClick={(e) => handleEditAccount(acc, e)}
-                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition"
-                          title="编辑账户"
-                        >
-                          <Edit2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <button
-                  onClick={handleAddAccount}
-                  className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-500 hover:text-blue-500 transition font-medium flex justify-center items-center space-x-2"
-                >
-                  <PlusCircle size={18} />
-                  <span>添加新的证券账户</span>
-                </button>
-              </div>
-            </div>
+            <Accounts
+              accounts={accounts}
+              selectedAccountId={selectedAccountId}
+              setSelectedAccountId={setSelectedAccountId}
+              handleEditAccount={handleEditAccount}
+              handleAddAccount={handleAddAccount}
+            />
           )}
         </div>
       </main>
