@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tag } from 'lucide-react';
 import type { Transaction, Account, TransactionType } from '../../types';
+import { searchStocks, fetchCNMarketStocks, type StockInfo } from '../../services/api';
 
 interface TransactionModalProps {
 	isOpen: boolean;
@@ -12,6 +13,98 @@ interface TransactionModalProps {
 }
 
 const TransactionModal = ({ isOpen, onClose, onSubmit, form, setForm, accounts }: TransactionModalProps) => {
+	const [searchResults, setSearchResults] = useState<StockInfo[]>([]);
+	const [showSuggestions, setShowSuggestions] = useState(false);
+	const [activeField, setActiveField] = useState<'code' | 'name' | null>(null);
+	const marketStocksRef = React.useRef<StockInfo[]>([]);
+
+	// Initial load of market data
+	useEffect(() => {
+		if (isOpen) {
+			const storedData = localStorage.getItem('market_stocks_cn');
+			if (storedData) {
+				try {
+					marketStocksRef.current = JSON.parse(storedData);
+				} catch (e) {
+					console.error('Failed to parse local market stocks', e);
+				}
+			}
+		}
+	}, [isOpen]);
+
+	// Debounce search
+	useEffect(() => {
+		const timer = setTimeout(async () => {
+			if (!activeField) {
+				setShowSuggestions(false);
+				return;
+			}
+			const query = activeField === 'code' ? form.stockCode : form.stockName;
+
+			if (query) {
+				let stocks = marketStocksRef.current;
+				const STORAGE_KEY = 'market_stocks_cn';
+
+				if (stocks.length === 0) {
+					// Try to load again or fetch if totally empty
+					const storedData = localStorage.getItem(STORAGE_KEY);
+					if (storedData) {
+						stocks = JSON.parse(storedData);
+						marketStocksRef.current = stocks;
+					} else {
+						// No local data, fetch full market data
+						try {
+							const res = await fetchCNMarketStocks();
+							if (res.code === 0 && res.data) {
+								// Cast MarketStock[] to StockInfo[] since they are structurally compatible
+								stocks = res.data as unknown as StockInfo[];
+								localStorage.setItem(STORAGE_KEY, JSON.stringify(stocks));
+								marketStocksRef.current = stocks;
+							}
+						} catch (e) {
+							console.error('Fetch market data failed', e);
+						}
+					}
+				}
+
+				if (stocks.length > 0) {
+					const lowerQuery = query.toLowerCase();
+					// Limit filtering to first 50 matches to improve performance
+					const filtered: StockInfo[] = [];
+					for (const s of stocks) {
+						if (s.symbol.toLowerCase().includes(lowerQuery) || s.name.toLowerCase().includes(lowerQuery)) {
+							filtered.push(s);
+							if (filtered.length >= 50) break;
+						}
+					}
+					setSearchResults(filtered);
+					setShowSuggestions(true);
+				} else if (query.length >= 2) {
+					// Fallback to API if still no local data
+					try {
+						const results = await searchStocks(query);
+						setSearchResults(results.data || []);
+						setShowSuggestions(true);
+					} catch (e) {
+						console.error('Search failed', e);
+					}
+				} else {
+					setShowSuggestions(false);
+				}
+			} else {
+				setShowSuggestions(false);
+			}
+		}, 300); // Reduced debounce time slightly as check is now faster
+
+		return () => clearTimeout(timer);
+	}, [form.stockCode, form.stockName, activeField]);
+
+	const handleSelectStock = (stock: StockInfo) => {
+		setForm((prev) => ({ ...prev, stockCode: stock.symbol, stockName: stock.name }));
+		setShowSuggestions(false);
+		setActiveField(null);
+	};
+
 	if (!isOpen) return null;
 
 	const getSafeValue = (val: number | undefined) => {
@@ -67,7 +160,7 @@ const TransactionModal = ({ isOpen, onClose, onSubmit, form, setForm, accounts }
 					</div>
 
 					<div className="grid grid-cols-2 gap-4">
-						<div>
+						<div className="relative">
 							<label className="block text-sm font-medium text-gray-700 mb-1">股票代码</label>
 							<input
 								required
@@ -75,18 +168,54 @@ const TransactionModal = ({ isOpen, onClose, onSubmit, form, setForm, accounts }
 								className="w-full border rounded-lg p-2"
 								placeholder="如: 600519"
 								value={form.stockCode || ''}
-								onChange={(e) => setForm((prev) => ({ ...prev, stockCode: e.target.value }))}
+								onFocus={() => setActiveField('code')}
+								onChange={(e) => {
+									setForm((prev) => ({ ...prev, stockCode: e.target.value }));
+									setActiveField('code');
+								}}
+								onBlur={() => setTimeout(() => setActiveField(null), 200)}
 							/>
+							{activeField === 'code' && showSuggestions && searchResults.length > 0 && (
+								<ul className="absolute z-10 w-full bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto mt-1 max-w-sm">
+									{searchResults.map((stock) => (
+										<li
+											key={stock.symbol}
+											className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
+											onClick={() => handleSelectStock(stock)}
+										>
+											<span className="font-bold text-blue-600">{stock.symbol}</span> - {stock.name}
+										</li>
+									))}
+								</ul>
+							)}
 						</div>
-						<div>
+						<div className="relative">
 							<label className="block text-sm font-medium text-gray-700 mb-1">股票名称</label>
 							<input
 								type="text"
 								className="w-full border rounded-lg p-2"
 								placeholder="如: 茅台"
 								value={form.stockName || ''}
-								onChange={(e) => setForm((prev) => ({ ...prev, stockName: e.target.value }))}
+								onFocus={() => setActiveField('name')}
+								onChange={(e) => {
+									setForm((prev) => ({ ...prev, stockName: e.target.value }));
+									setActiveField('name');
+								}}
+								onBlur={() => setTimeout(() => setActiveField(null), 200)}
 							/>
+							{activeField === 'name' && showSuggestions && searchResults.length > 0 && (
+								<ul className="absolute z-10 w-full bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto mt-1 max-w-sm">
+									{searchResults.map((stock) => (
+										<li
+											key={stock.symbol}
+											className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
+											onClick={() => handleSelectStock(stock)}
+										>
+											<span className="font-bold text-blue-600">{stock.symbol}</span> - {stock.name}
+										</li>
+									))}
+								</ul>
+							)}
 						</div>
 					</div>
 

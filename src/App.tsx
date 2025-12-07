@@ -13,6 +13,7 @@ import {
   Download,
   Upload,
   FileText,
+  RefreshCw,
 } from "lucide-react";
 
 // Hooks
@@ -23,6 +24,7 @@ import { collection, doc, writeBatch } from "firebase/firestore";
 import { db, appId } from "./lib/firebase";
 import { useStockData } from "./hooks/useStockData";
 import { usePortfolioAnalysis } from "./hooks/usePortfolioAnalysis";
+import { useMarketData } from "./hooks/useMarketData";
 
 import Login from "./components/Login";
 import LoadingOverlay from "./components/LoadingOverlay";
@@ -58,6 +60,7 @@ import { formatCurrency, formatDateForInput } from "./utils";
 export default function StockTracker() {
   // --- Auth ---
   const { user, loading: authLoading, logout } = useAuth();
+  const { refresh: refreshMarketData, loading: marketDataLoading } = useMarketData(user);
 
   // --- State ---
   const [activeTab, setActiveTab] = useState<
@@ -574,6 +577,23 @@ export default function StockTracker() {
           </div>
           <div className="flex items-center space-x-4">
             <button
+              onClick={async () => {
+                showMessage("正在更新市场数据...", "info");
+                const success = await refreshMarketData();
+                if (success) {
+                  showMessage("市场数据更新成功", "success");
+                } else {
+                  showMessage("市场数据更新失败", "error");
+                }
+              }}
+              disabled={marketDataLoading}
+              className={`text-gray-500 hover:text-blue-600 flex items-center space-x-1 text-sm font-medium transition px-2 ${marketDataLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              title="更新市场数据"
+            >
+              <RefreshCw size={16} className={marketDataLoading ? 'animate-spin' : ''} />
+              <span className="hidden sm:inline">更新数据</span>
+            </button>
+            <button
               onClick={() => setShowBackupModal(true)}
               className="text-gray-500 hover:text-blue-600 flex items-center space-x-1 text-sm font-medium transition px-2"
               title="备份与恢复"
@@ -713,11 +733,10 @@ export default function StockTracker() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                activeTab === tab.id
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-300/50"
-              }`}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === tab.id
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-300/50"
+                }`}
             >
               <tab.icon size={16} />
               <span>{tab.label}</span>
