@@ -14,7 +14,7 @@ export interface StockInfo {
 }
 
 export const fetchStockPrices = async (symbols: string[]): Promise<StockPriceResponse> => {
-  return request<StockPriceResponse>('/api/v1/stocks/price', {
+  return request<StockPriceResponse>('/api/v1/stock/price', {
     method: 'GET',
     params: { symbols: symbols, mode: 'simple' },
   });
