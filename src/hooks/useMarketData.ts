@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { User } from 'firebase/auth';
-import { fetchCNMarketStocks, type MarketStock } from '../services/api';
+import { fetchCNMarketStocks } from '../services/api';
 
 const STORAGE_KEY = 'market_stocks_cn';
 
