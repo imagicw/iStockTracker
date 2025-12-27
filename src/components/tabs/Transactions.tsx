@@ -81,15 +81,17 @@ const Transactions: React.FC<TransactionsProps> = ({
                 const isDividend = tx.type === "DIVIDEND";
                 const isRevoked = tx.status === "revoked";
 
-                let amount = 0;
-                if (isInterest || isDividend) {
-                  amount = tx.price;
-                } else {
-                  amount = tx.price * tx.shares;
-                }
-
                 const totalFee =
                   (tx.commission || 0) + (tx.tax || 0) + (tx.otherFees || 0);
+
+                let amount = 0;
+                if (isInterest || isDividend) {
+                  amount = tx.price - totalFee;
+                } else if (isBuy) {
+                  amount = tx.price * tx.shares + totalFee;
+                } else {
+                  amount = tx.price * tx.shares - totalFee;
+                }
 
                 let badgeColor = "bg-gray-100 text-gray-600";
                 if (isBuy) badgeColor = "bg-red-100 text-red-600";
@@ -107,9 +109,8 @@ const Transactions: React.FC<TransactionsProps> = ({
                 return (
                   <tr key={tx.id} className={`${rowOpacity} group`}>
                     <td
-                      className={`px-4 py-3 text-gray-500 whitespace-nowrap ${
-                        isRevoked ? "bg-gray-50" : "bg-white"
-                      } group-hover:bg-gray-50 ${stickyLeftFirst}`}
+                      className={`px-4 py-3 text-gray-500 whitespace-nowrap ${isRevoked ? "bg-gray-50" : "bg-white"
+                        } group-hover:bg-gray-50 ${stickyLeftFirst}`}
                     >
                       {tx.date}
                     </td>
@@ -157,16 +158,14 @@ const Transactions: React.FC<TransactionsProps> = ({
                       {isInterest ? "-" : formatNumber(totalFee)}
                     </td>
                     <td
-                      className={`px-4 py-3 text-right font-medium ${textDecoration} ${
-                        isInterest ? "text-amber-600" : ""
-                      }`}
+                      className={`px-4 py-3 text-right font-medium ${textDecoration} ${isInterest ? "text-amber-600" : ""
+                        }`}
                     >
                       {formatCurrency(amount)}
                     </td>
                     <td
-                      className={`px-4 py-3 text-center ${
-                        isRevoked ? "bg-gray-50" : "bg-white"
-                      } group-hover:bg-gray-50 ${stickyRightLast}`}
+                      className={`px-4 py-3 text-center ${isRevoked ? "bg-gray-50" : "bg-white"
+                        } group-hover:bg-gray-50 ${stickyRightLast}`}
                     >
                       {isRevoked ? (
                         <span className="text-xs font-bold text-gray-400 border border-gray-300 px-2 py-1 rounded">
