@@ -2,6 +2,13 @@ import React, { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { Loader2, TrendingUp } from "lucide-react";
 
+const validatePassword = (pass: string) => {
+  if (pass.length < 8) return "密码长度不能少于8位";
+  if (!/[A-Za-z]/.test(pass)) return "密码需要包含至少一个字母";
+  if (!/[0-9]/.test(pass)) return "密码需要包含至少一个数字";
+  return null;
+};
+
 const Login = () => {
   const { loginWithEmail, registerWithEmail, loading, error } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
@@ -12,9 +19,11 @@ const Login = () => {
   const [rememberMe, setRememberMe] = useState(
     () => !!localStorage.getItem("rememberedEmail")
   );
+  const [localError, setLocalError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLocalError(null);
     try {
       if (isLogin) {
         if (rememberMe) {
@@ -24,6 +33,11 @@ const Login = () => {
         }
         await loginWithEmail(email, password);
       } else {
+        const passwordError = validatePassword(password);
+        if (passwordError) {
+          setLocalError(passwordError);
+          return;
+        }
         await registerWithEmail(email, password);
       }
     } catch (e) {
@@ -45,9 +59,9 @@ const Login = () => {
         </div>
 
         <div className="p-8">
-          {error && (
+          {(localError || error) && (
             <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-6">
-              {error}
+              {localError || error}
             </div>
           )}
 
@@ -107,7 +121,7 @@ const Login = () => {
 
           <div className="mt-6 text-center space-y-4">
             <button
-              onClick={() => setIsLogin(!isLogin)}
+              onClick={() => { setIsLogin(!isLogin); setLocalError(null); }}
               className="text-sm text-blue-600 hover:underline"
             >
               {isLogin ? "没有账号？点击注册" : "已有账号？点击登录"}
@@ -120,4 +134,3 @@ const Login = () => {
 };
 
 export default Login;
-	

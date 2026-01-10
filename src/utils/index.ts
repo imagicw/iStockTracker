@@ -35,16 +35,20 @@ export const getFirebaseErrorMessage = (error: any): string =>
 {
   if (error)
   {
-    if (error.includes('auth/user-not-found')) return '用户不存在';
-    if (error.includes('auth/wrong-password')) return '密码错误';
-    if (error.includes('auth/email-already-in-use')) return '该邮箱已被注册';
-    if (error.includes('auth/invalid-email')) return '邮箱格式不正确';
-    if (error.includes('auth/weak-password')) return '密码强度太低';
-    if (error.includes('auth/network-request-failed')) return '网络请求失败，请检查网络';
-    if (error.includes('unavailable')) return '服务暂时不可用';
-    if (error.includes('auth/admin-restricted-operation')) return '操作受限';
-    if (error.includes('auth/invalid-credential')) return '账号密码不正确，请重试';
-    return `未知错误 (${error})`;
+    if (typeof error === 'string') {
+        if (error.includes('auth/user-not-found')) return '用户不存在';
+        if (error.includes('auth/wrong-password')) return '密码错误';
+        if (error.includes('auth/email-already-in-use')) return '该邮箱已被注册';
+        if (error.includes('auth/invalid-email')) return '邮箱格式不正确';
+        if (error.includes('auth/weak-password')) return '密码强度太低';
+        if (error.includes('auth/network-request-failed')) return '网络请求失败，请检查网络';
+        if (error.includes('unavailable')) return '服务暂时不可用';
+        if (error.includes('auth/admin-restricted-operation')) return '操作受限';
+        if (error.includes('auth/invalid-credential')) return '账号密码不正确，请重试';
+    }
+    // Safe fallback that doesn't leak error details
+    console.error('Firebase error:', error);
+    return '发生未知错误，请稍后重试';
   }
-  return error?.message || '发生未知错误';
+  return '发生未知错误';
 };
