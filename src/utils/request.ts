@@ -12,7 +12,8 @@ const request = extend({
     "Content-Type": "application/json",
   },
   errorHandler: (error: ResponseError) => {
-    console.error("Request failed:", error);
+    // 🛡️ Sentinel: Log only the error message to avoid leaking sensitive data (headers/body)
+    console.error("Request failed:", error.message || "Unknown error");
     throw error;
   },
 });

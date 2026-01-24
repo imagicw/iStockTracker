@@ -164,6 +164,7 @@ const TransactionModal = ({ isOpen, onClose, onSubmit, form, setForm, accounts }
 							<label className="block text-sm font-medium text-gray-700 mb-1">股票代码</label>
 							<input
 								required
+								maxLength={20}
 								type="text"
 								className="w-full border rounded-lg p-2"
 								placeholder="如: 600519"
@@ -193,6 +194,7 @@ const TransactionModal = ({ isOpen, onClose, onSubmit, form, setForm, accounts }
 							<label className="block text-sm font-medium text-gray-700 mb-1">股票名称</label>
 							<input
 								type="text"
+								maxLength={50}
 								className="w-full border rounded-lg p-2"
 								placeholder="如: 茅台"
 								value={form.stockName || ''}
@@ -310,6 +312,7 @@ const TransactionModal = ({ isOpen, onClose, onSubmit, form, setForm, accounts }
 						</label>
 						<input
 							type="text"
+							maxLength={50}
 							className="w-full border rounded-lg p-2"
 							placeholder="如: T-1127 或 第一波 (相同标记会自动统计T收益)"
 							value={form.groupTag || ''}

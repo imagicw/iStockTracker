@@ -28,6 +28,7 @@ const AccountCreationModal: React.FC<AccountCreationModalProps> = ({ isOpen, onC
 						<input
 							autoFocus
 							required
+							maxLength={50}
 							type="text"
 							className="w-full border rounded-lg p-2"
 							placeholder="例如：招商证券-主账户"
