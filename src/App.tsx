@@ -55,7 +55,7 @@ import type {
   StockStrategyStats,
   ToastType,
 } from "./types";
-import { formatCurrency, formatDateForInput } from "./utils";
+import { formatCurrency, formatDateForInput, sanitizeCSVField } from "./utils";
 
 export default function StockTracker() {
   // --- Auth ---
@@ -531,17 +531,17 @@ export default function StockTracker() {
       else if (tx.type === "INTEREST") typeStr = "融资利息";
 
       const row = [
-        tx.date,
-        tx.stockCode,
-        tx.stockName,
-        typeStr,
-        tx.price || 0,
-        tx.shares || 0,
-        tx.commission || 0,
-        tx.tax || 0,
-        tx.otherFees || 0,
-        tx.groupTag || "",
-        accName,
+        sanitizeCSVField(tx.date),
+        sanitizeCSVField(tx.stockCode),
+        sanitizeCSVField(tx.stockName),
+        sanitizeCSVField(typeStr),
+        sanitizeCSVField(tx.price || 0),
+        sanitizeCSVField(tx.shares || 0),
+        sanitizeCSVField(tx.commission || 0),
+        sanitizeCSVField(tx.tax || 0),
+        sanitizeCSVField(tx.otherFees || 0),
+        sanitizeCSVField(tx.groupTag || ""),
+        sanitizeCSVField(accName),
       ].join(",");
       csvContent += row + "\n";
     });
