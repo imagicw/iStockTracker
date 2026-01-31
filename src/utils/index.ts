@@ -48,3 +48,23 @@ export const getFirebaseErrorMessage = (error: any): string =>
   }
   return error?.message || '发生未知错误';
 };
+
+export const sanitizeCSVField = (value: string | number | undefined | null): string =>
+{
+  if (value === undefined || value === null) return "";
+  let str = String(value);
+
+  // Prevent CSV Injection
+  // If the field starts with any of the following characters: =, +, -, @, \t, \r
+  // prepend a single quote to force it to be treated as text.
+  if (/^[=+\-@\t\r]/.test(str))
+  {
+    str = "'" + str;
+  }
+
+  // Escape double quotes by replacing " with ""
+  str = str.replace(/"/g, '""');
+
+  // Wrap the entire field in double quotes
+  return `"${str}"`;
+};
