@@ -55,7 +55,8 @@ import type {
   StockStrategyStats,
   ToastType,
 } from "./types";
-import { formatCurrency, formatDateForInput } from "./utils";
+import { formatCurrency, formatDateForInput, sanitizeCSVField } from "./utils";
+import { validateImportData } from "./utils/validation";
 
 export default function StockTracker() {
   // --- Auth ---
@@ -418,10 +419,9 @@ export default function StockTracker() {
   const handleRestoreData = async (jsonContent: string) => {
     if (!user) return;
     try {
-      const data = JSON.parse(jsonContent);
-      if (!Array.isArray(data.accounts) || !Array.isArray(data.transactions)) {
-        throw new Error("格式错误");
-      }
+      // 🛡️ Sentinel: Validate and sanitize import data to prevent injection/corruption
+      const data = validateImportData(JSON.parse(jsonContent));
+
       setGlobalLoading(true);
 
       // Restore Accounts
@@ -440,7 +440,7 @@ export default function StockTracker() {
           batch.set(newAccountRef, {
             name: bAccount.name,
             initialRealizedPnL:
-              bAccount.initialRealizedPnL || bAccount.initialPnL || 0,
+              bAccount.initialRealizedPnL || 0,
             createdAt: new Date().toISOString(),
           });
           accountIdMap[bAccount.id] = newAccountRef.id;
@@ -531,17 +531,17 @@ export default function StockTracker() {
       else if (tx.type === "INTEREST") typeStr = "融资利息";
 
       const row = [
-        tx.date,
-        tx.stockCode,
-        tx.stockName,
-        typeStr,
-        tx.price || 0,
-        tx.shares || 0,
-        tx.commission || 0,
-        tx.tax || 0,
-        tx.otherFees || 0,
-        tx.groupTag || "",
-        accName,
+        sanitizeCSVField(tx.date),
+        sanitizeCSVField(tx.stockCode),
+        sanitizeCSVField(tx.stockName),
+        sanitizeCSVField(typeStr),
+        sanitizeCSVField(tx.price || 0),
+        sanitizeCSVField(tx.shares || 0),
+        sanitizeCSVField(tx.commission || 0),
+        sanitizeCSVField(tx.tax || 0),
+        sanitizeCSVField(tx.otherFees || 0),
+        sanitizeCSVField(tx.groupTag || ""),
+        sanitizeCSVField(accName),
       ].join(",");
       csvContent += row + "\n";
     });
