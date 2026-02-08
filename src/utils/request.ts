@@ -12,8 +12,14 @@ const request = extend({
     "Content-Type": "application/json",
   },
   errorHandler: (error: ResponseError) => {
-    // 🛡️ Sentinel: Log only the error message to avoid leaking sensitive data (headers/body)
-    console.error("Request failed:", error.message || "Unknown error");
+    // 🛡️ Sentinel: Sanitize error logging to avoid leaking sensitive request/response data (headers, etc.)
+    const safeLog = {
+      name: error.name,
+      message: error.message,
+      status: error.response?.status,
+      type: error.type,
+    };
+    console.error("Request failed:", safeLog);
     throw error;
   },
 });
