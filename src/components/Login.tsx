@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { validatePassword } from "../utils/validation";
 import { Loader2, TrendingUp } from "lucide-react";
 
 const Login = () => {
   const { loginWithEmail, registerWithEmail, loading, error } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const [email, setEmail] = useState(
     () => localStorage.getItem("rememberedEmail") || ""
   );
@@ -15,6 +17,7 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setValidationError(null);
     try {
       if (isLogin) {
         if (rememberMe) {
@@ -24,6 +27,11 @@ const Login = () => {
         }
         await loginWithEmail(email, password);
       } else {
+        const { isValid, message } = validatePassword(password);
+        if (!isValid) {
+          setValidationError(message || "Invalid password");
+          return;
+        }
         await registerWithEmail(email, password);
       }
     } catch (e) {
@@ -45,9 +53,9 @@ const Login = () => {
         </div>
 
         <div className="p-8">
-          {error && (
+          {(error || validationError) && (
             <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-6">
-              {error}
+              {validationError || error}
             </div>
           )}
 
@@ -107,7 +115,10 @@ const Login = () => {
 
           <div className="mt-6 text-center space-y-4">
             <button
-              onClick={() => setIsLogin(!isLogin)}
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setValidationError(null);
+              }}
               className="text-sm text-blue-600 hover:underline"
             >
               {isLogin ? "没有账号？点击注册" : "已有账号？点击登录"}

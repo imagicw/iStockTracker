@@ -83,3 +83,19 @@ export const validateImportData = (data: any): ImportData => {
 
   return { accounts: cleanAccounts, transactions: cleanTransactions };
 };
+
+export const validatePassword = (password: string): { isValid: boolean; message?: string } => {
+  if (!password) {
+    return { isValid: false, message: 'Password is required' };
+  }
+  if (password.length < 8) {
+    return { isValid: false, message: '密码长度至少需要 8 位' };
+  }
+  if (!/[A-Za-z]/.test(password)) {
+    return { isValid: false, message: '密码必须包含至少一个字母' };
+  }
+  if (!/\d/.test(password)) {
+    return { isValid: false, message: '密码必须包含至少一个数字' };
+  }
+  return { isValid: true };
+};
