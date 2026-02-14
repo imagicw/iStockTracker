@@ -11,3 +11,10 @@
 **Learning:** Client-side data restore features are effectively "file uploads" and must be treated with the same scrutiny as server-side inputs. Never trust the structure or content of imported data.
 
 **Prevention:** Implemented strict schema validation and sanitization (`validateImportData`) for all imported data. Whitelisted allowed fields and enforced type checks before processing.
+
+## 2026-06-16 - Missing Client-Side Password Policy
+**Vulnerability:** The application allowed registration with weak passwords (e.g., "123456") directly via `registerWithEmail`, relying solely on the backend provider's minimum requirements. This could lead to account compromise through credential stuffing or brute-force attacks.
+
+**Learning:** Authentication providers (like Firebase) handle storage securely but may not enforce strict password complexity policies by default. Client-side validation is a necessary first line of defense.
+
+**Prevention:** Implemented a robust `validatePassword` utility enforcing minimum length, mixed case, and numeric characters. Integrated this validation into the registration flow to reject weak passwords before API submission.
