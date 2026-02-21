@@ -21,6 +21,35 @@ const sanitizeNumber = (num: any, allowNegative: boolean = false): number => {
   return n;
 };
 
+// 🛡️ Sentinel: Sanitize user input for transactions to prevent injection and enforce constraints
+export const sanitizeTransactionInput = (tx: any): Partial<Transaction> => {
+    // Type validation
+    if (!isValidTransactionType(tx.type)) {
+        throw new Error(`Invalid transaction type "${tx.type}".`);
+    }
+
+    return {
+      stockCode: sanitizeString(tx.stockCode, 20),
+      stockName: sanitizeString(tx.stockName, 50),
+      type: tx.type,
+      price: sanitizeNumber(tx.price, false),
+      shares: sanitizeNumber(tx.shares, false),
+      commission: sanitizeNumber(tx.commission, false),
+      tax: sanitizeNumber(tx.tax, false),
+      otherFees: sanitizeNumber(tx.otherFees, false),
+      marginInterest: sanitizeNumber(tx.marginInterest, false),
+      date: sanitizeString(tx.date, 10), // YYYY-MM-DD
+      status: tx.status === 'revoked' ? 'revoked' : 'normal',
+      groupTag: sanitizeString(tx.groupTag, 50),
+      // createdAt is optional
+      ...(tx.createdAt ? { createdAt: sanitizeString(tx.createdAt, 30) } : {}),
+      // Keep ID if present (sanitized)
+      ...(tx.id ? { id: sanitizeString(tx.id, 50) } : {}),
+      // Keep AccountID if present (sanitized)
+      ...(tx.accountId ? { accountId: sanitizeString(tx.accountId, 50) } : {}),
+    };
+};
+
 export const validateImportData = (data: any): ImportData => {
   if (!data || typeof data !== 'object') {
     throw new Error('Invalid JSON format: Root must be an object.');
@@ -56,29 +85,13 @@ export const validateImportData = (data: any): ImportData => {
         throw new Error(`Transaction[${index}]: Missing Account ID.`);
     }
 
-    // Type validation
-    if (!isValidTransactionType(tx.type)) {
-        throw new Error(`Transaction[${index}]: Invalid transaction type "${tx.type}".`);
-    }
+    const sanitized = sanitizeTransactionInput(tx);
 
-    return {
-      id: sanitizeString(tx.id, 50),
-      accountId: sanitizeString(tx.accountId, 50),
-      stockCode: sanitizeString(tx.stockCode, 20),
-      stockName: sanitizeString(tx.stockName, 50),
-      type: tx.type,
-      price: sanitizeNumber(tx.price, false),
-      shares: sanitizeNumber(tx.shares, false),
-      commission: sanitizeNumber(tx.commission, false),
-      tax: sanitizeNumber(tx.tax, false),
-      otherFees: sanitizeNumber(tx.otherFees, false),
-      marginInterest: sanitizeNumber(tx.marginInterest, false),
-      date: sanitizeString(tx.date, 10), // YYYY-MM-DD
-      status: tx.status === 'revoked' ? 'revoked' : 'normal',
-      groupTag: sanitizeString(tx.groupTag, 50),
-      // createdAt is optional and handled by serverTimestamp often, but if present we sanitize
-      createdAt: tx.createdAt ? sanitizeString(tx.createdAt, 30) : undefined,
-    } as Transaction;
+    // Ensure accountId and id are present (for validateImportData context)
+    if (!sanitized.accountId) sanitized.accountId = sanitizeString(tx.accountId, 50);
+    if (!sanitized.id && tx.id) sanitized.id = sanitizeString(tx.id, 50);
+
+    return sanitized as Transaction;
   });
 
   return { accounts: cleanAccounts, transactions: cleanTransactions };
