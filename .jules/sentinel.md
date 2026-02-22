@@ -18,3 +18,10 @@
 **Learning:** Authentication providers (like Firebase) handle storage securely but may not enforce strict password complexity policies by default. Client-side validation is a necessary first line of defense.
 
 **Prevention:** Implemented a robust `validatePassword` utility enforcing minimum length, mixed case, and numeric characters. Integrated this validation into the registration flow to reject weak passwords before API submission.
+
+## 2026-02-21 - Unsanitized CSV/Text Import
+**Vulnerability:** The "Paste Excel/CSV Data" feature in `ImportModal` parsed raw text and directly inserted it into the application state without any sanitization or validation. This bypassed the existing security controls used for JSON backups, allowing potential Stored XSS or Denial of Service via malformed data.
+
+**Learning:** Different entry points for similar data (e.g., JSON restore vs. CSV paste) must share the same validation logic. Consistency is key to avoiding security gaps.
+
+**Prevention:** Refactored `src/utils/validation.ts` to export a reusable `sanitizeTransactionInput` function and integrated it into both the JSON restore and the CSV/Text import flows.

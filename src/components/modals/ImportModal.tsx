@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Account, TransactionType, ToastType } from '../../types';
+import { sanitizeTransactionInput } from '../../utils/validation';
 
 interface ImportModalProps {
 	isOpen: boolean;
@@ -46,20 +47,27 @@ const ImportModal = ({ isOpen, onClose, onImport, accounts, showMessage }: Impor
 
 			if (!isNaN(price)) {
 				const safeShares = isNaN(shares) ? 0 : shares;
-				data.push({
-					date,
-					stockCode,
-					stockName,
-					type,
-					price,
-					shares: safeShares,
-					commission,
-					tax,
-					otherFees,
-					marginInterest: 0,
-					status: 'normal',
-					groupTag,
-				});
+
+				try {
+					// 🛡️ Sentinel: Sanitize imported data before adding to state
+					const sanitized = sanitizeTransactionInput({
+						date,
+						stockCode,
+						stockName,
+						type,
+						price,
+						shares: safeShares,
+						commission,
+						tax,
+						otherFees,
+						marginInterest: 0,
+						status: 'normal',
+						groupTag,
+					});
+					data.push(sanitized);
+				} catch (e) {
+					console.warn(`Skipping invalid line: ${line}`, e);
+				}
 			}
 		}
 		setParsedData(data);
