@@ -67,6 +67,7 @@ const Login = () => {
               <input
                 type="email"
                 required
+                maxLength={255}
                 className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none transition"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -80,6 +81,7 @@ const Login = () => {
               <input
                 type="password"
                 required
+                maxLength={128}
                 className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none transition"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
