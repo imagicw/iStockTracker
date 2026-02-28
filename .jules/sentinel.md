@@ -25,3 +25,10 @@
 **Learning:** Different entry points for similar data (e.g., JSON restore vs. CSV paste) must share the same validation logic. Consistency is key to avoiding security gaps.
 
 **Prevention:** Refactored `src/utils/validation.ts` to export a reusable `sanitizeTransactionInput` function and integrated it into both the JSON restore and the CSV/Text import flows.
+
+## 2026-07-02 - Missing Input Length Limits on Authentication (DoS Risk)
+**Vulnerability:** The login and registration form inputs for email and password lacked maximum length boundaries. An attacker or a misbehaving bot could submit exceedingly large strings, potentially causing ReDoS (Regular Expression Denial of Service) during client-side regex checks or backend hash exhaustion leading to DoS.
+
+**Learning:** It is easy to assume backend services will reject overly large payloads, but handling those payloads securely without consuming excessive resources is not guaranteed. Defense in depth demands that client applications proactively cap user input size before it triggers regex processing or API calls.
+
+**Prevention:** Added strict `maxLength` attributes to all authentication input fields (`maxLength={255}` for email and `maxLength={128}` for password) in the `Login.tsx` component to enforce sensible boundaries directly at the point of entry.
