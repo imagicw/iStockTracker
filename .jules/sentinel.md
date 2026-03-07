@@ -32,3 +32,10 @@
 **Learning:** It is easy to assume backend services will reject overly large payloads, but handling those payloads securely without consuming excessive resources is not guaranteed. Defense in depth demands that client applications proactively cap user input size before it triggers regex processing or API calls.
 
 **Prevention:** Added strict `maxLength` attributes to all authentication input fields (`maxLength={255}` for email and `maxLength={128}` for password) in the `Login.tsx` component to enforce sensible boundaries directly at the point of entry.
+
+## 2026-11-06 - Insecure Data URI Export leading to Data Truncation/Corruption
+**Vulnerability:** The CSV export feature used `encodeURI()` with a Data URI (`data:text/csv...`) to trigger the download. This method is insecure and fragile because `encodeURI` does not properly encode characters like `#`, which are interpreted as fragment identifiers by the browser. This could lead to silent data truncation or export failure if users included such characters in their data (e.g., in `groupTag`). Furthermore, Data URIs have strict length limitations in some browsers, potentially breaking exports for users with large transaction histories.
+
+**Learning:** Data URIs should not be used for exporting user-generated content or large files due to encoding complexities and size limits. `encodeURIComponent` is required for Data URIs, but `Blob` objects provide a far more robust, performant, and secure alternative for client-side file generation and downloading.
+
+**Prevention:** Replaced the Data URI construction with a `Blob` containing the CSV content, generated an Object URL using `URL.createObjectURL(blob)`, and used that for the download link. Also ensured memory is freed using `URL.revokeObjectURL(url)`.

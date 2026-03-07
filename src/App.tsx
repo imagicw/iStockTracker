@@ -518,7 +518,7 @@ export default function StockTracker() {
       return;
     }
 
-    let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+    let csvContent = "\uFEFF"; // Add BOM for Excel compatibility
     csvContent +=
       "日期,代码,名称,操作,价格/金额,数量,佣金,印花/红利税,其他费用,分组Tag,账户\n";
 
@@ -546,9 +546,10 @@ export default function StockTracker() {
       csvContent += row + "\n";
     });
 
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
+    link.setAttribute("href", url);
     link.setAttribute(
       "download",
       `交易记录_${new Date().toISOString().split("T")[0]}.csv`
@@ -556,6 +557,7 @@ export default function StockTracker() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url); // Clean up to avoid memory leaks
     showMessage(`已导出 ${dataToExport.length} 条记录`, "success");
   };
 
