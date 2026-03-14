@@ -119,6 +119,7 @@ const ImportModal = ({ isOpen, onClose, onImport, accounts, showMessage }: Impor
 							placeholder={`2023-01-01, 600519, 茅台, 买入, 1800, 100, 5, 0, 0, 首仓\n2023-01-02, 600519, 茅台, 卖出, 1850, 100, 5, 1.8, 0, 首仓`}
 							value={text}
 							onChange={(e) => setText(e.target.value)}
+							maxLength={5000000} // 🛡️ Sentinel: Enforce paste size limit to prevent DoS via large parsing
 						/>
 						<button onClick={parseText} className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-sm font-medium">
 							解析预览
