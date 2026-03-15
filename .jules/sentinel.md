@@ -39,3 +39,17 @@
 **Learning:** Data URIs should not be used for exporting user-generated content or large files due to encoding complexities and size limits. `encodeURIComponent` is required for Data URIs, but `Blob` objects provide a far more robust, performant, and secure alternative for client-side file generation and downloading.
 
 **Prevention:** Replaced the Data URI construction with a `Blob` containing the CSV content, generated an Object URL using `URL.createObjectURL(blob)`, and used that for the download link. Also ensured memory is freed using `URL.revokeObjectURL(url)`.
+
+## 2026-11-07 - Missing Input Length Limits on Data Imports (DoS Risk)
+**Vulnerability:** The data import feature allowed users to upload JSON backup files or paste CSV data of unlimited size. A malicious user or bot could exploit this by providing an excessively large file or text string, which would cause the application to hang or crash when `JSON.parse` or other synchronous parsing operations were executed (Client-Side Denial of Service).
+
+**Learning:** Client-side parsing of large datasets is resource-intensive and blocks the main thread. It's crucial to enforce reasonable upper bounds on file sizes and input lengths before attempting to process or load them into state, protecting the application's availability.
+
+**Prevention:** Enforced a 5MB size limit on the JSON file upload input (`file.size > 5 * 1024 * 1024`) and added a `maxLength={5000000}` attribute to the raw text input areas in `BackupRestoreModal` and `ImportModal`.
+
+## 2026-11-07 - Memory Leak in Backup Export
+**Vulnerability:** The backup export feature generated a `Blob` containing the user's transaction data and created an Object URL using `URL.createObjectURL(blob)`, but failed to call `URL.revokeObjectURL(url)` after the download was triggered. This caused the sensitive transaction data to remain in memory for the lifetime of the document, increasing the risk of data exposure if the browser memory was inspected or dumped.
+
+**Learning:** Object URLs are a convenient way to trigger client-side downloads, but they tie up memory and can linger indefinitely if not explicitly cleaned up.
+
+**Prevention:** Added `URL.revokeObjectURL(url)` immediately after triggering the download click event in `BackupRestoreModal` to ensure the memory is freed and sensitive data is purged from the browser's active memory pool.

@@ -32,6 +32,8 @@ const BackupRestoreModal = ({ isOpen, onClose, accounts, transactions, showMessa
 		document.body.appendChild(link);
 		link.click();
 		document.body.removeChild(link);
+		// 🛡️ Sentinel: Clean up memory to prevent sensitive data leak
+		URL.revokeObjectURL(url);
 		showMessage('备份文件已下载', 'success');
 	};
 
@@ -100,6 +102,11 @@ const BackupRestoreModal = ({ isOpen, onClose, accounts, transactions, showMessa
 										onChange={(e) => {
 											const file = e.target.files?.[0];
 											if (file) {
+												// 🛡️ Sentinel: Enforce file size limit to prevent DoS via large JSON parsing
+												if (file.size > 5 * 1024 * 1024) {
+													showMessage('文件过大，请上传小于 5MB 的文件', 'error');
+													return;
+												}
 												const reader = new FileReader();
 												reader.onload = (e) => {
 													const content = e.target?.result as string;
@@ -116,6 +123,7 @@ const BackupRestoreModal = ({ isOpen, onClose, accounts, transactions, showMessa
 									placeholder='{"version": "1.0", "accounts": [...], "transactions": [...] }'
 									value={restoreText}
 									onChange={(e) => setRestoreText(e.target.value)}
+									maxLength={5000000}
 								/>
 							</div>
 							<button
