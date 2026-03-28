@@ -35,8 +35,8 @@ export const getFirebaseErrorMessage = (error: any): string =>
 {
   if (error)
   {
-    if (error.includes('auth/user-not-found')) return '用户不存在';
-    if (error.includes('auth/wrong-password')) return '密码错误';
+    if (error.includes('auth/user-not-found')) return '账号密码不正确，请重试';
+    if (error.includes('auth/wrong-password')) return '账号密码不正确，请重试';
     if (error.includes('auth/email-already-in-use')) return '该邮箱已被注册';
     if (error.includes('auth/invalid-email')) return '邮箱格式不正确';
     if (error.includes('auth/weak-password')) return '密码强度太低';
