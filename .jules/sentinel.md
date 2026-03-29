@@ -53,3 +53,10 @@
 **Learning:** Object URLs are a convenient way to trigger client-side downloads, but they tie up memory and can linger indefinitely if not explicitly cleaned up.
 
 **Prevention:** Added `URL.revokeObjectURL(url)` immediately after triggering the download click event in `BackupRestoreModal` to ensure the memory is freed and sensitive data is purged from the browser's active memory pool.
+
+## 2026-11-08 - User Enumeration via Authentication Error Messages
+**Vulnerability:** The login form returned distinct error messages for "user not found" (`auth/user-not-found`) and "wrong password" (`auth/wrong-password`). An attacker could exploit this to determine whether a specific email address is registered in the system (User Enumeration), which aids in targeted phishing or credential stuffing attacks.
+
+**Learning:** Authentication endpoints must never reveal whether an account exists or not during a failed login attempt. The feedback provided to the user should be identical regardless of whether the username was wrong or the password was wrong.
+
+**Prevention:** Consolidate error messages for invalid credentials into a single, generic message like "账号密码不正确，请重试" (Invalid email or password).
