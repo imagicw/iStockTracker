@@ -60,3 +60,10 @@
 **Learning:** Authentication endpoints must never reveal whether an account exists or not during a failed login attempt. The feedback provided to the user should be identical regardless of whether the username was wrong or the password was wrong.
 
 **Prevention:** Consolidate error messages for invalid credentials into a single, generic message like "账号密码不正确，请重试" (Invalid email or password).
+
+## 2026-11-09 - High Severity Vulnerabilities via Outdated Networking Dependency
+**Vulnerability:** The project relied on `umi-request`, a networking library that brought in multiple high-severity vulnerabilities through its dependencies (`node-fetch` and `isomorphic-fetch`). These dependencies had known CVEs (e.g. `node-fetch` forwards secure headers to untrusted sites), posing significant security risks to the application.
+
+**Learning:** Third-party libraries, especially those handling networking or sensitive operations, can quickly become vectors for attack if their dependency chains are not actively maintained. When native APIs (like `fetch`) are available and sufficient, using them reduces the attack surface and dependency management overhead.
+
+**Prevention:** Removed `umi-request` and its vulnerable dependencies. Refactored the network request wrapper (`src/utils/request.ts`) to use the native `fetch` API directly, eliminating the vulnerability while preserving functionality.
