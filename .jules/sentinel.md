@@ -67,3 +67,10 @@
 **Learning:** Third-party libraries, especially those handling networking or sensitive operations, can quickly become vectors for attack if their dependency chains are not actively maintained. When native APIs (like `fetch`) are available and sufficient, using them reduces the attack surface and dependency management overhead.
 
 **Prevention:** Removed `umi-request` and its vulnerable dependencies. Refactored the network request wrapper (`src/utils/request.ts`) to use the native `fetch` API directly, eliminating the vulnerability while preserving functionality.
+
+## 2026-11-10 - Missing Timeouts on External API Calls (DoS Risk)
+**Vulnerability:** The native `fetch` API implementation in the network request wrapper (`src/utils/request.ts`) lacked explicit timeouts. If an external API or service became unresponsive, the requests would hang indefinitely, potentially exhausting client resources, freezing parts of the UI, or making the application vulnerable to slow-rate Denial of Service (DoS) behaviors.
+
+**Learning:** Unlike some legacy networking libraries (like `axios` or `umi-request`), the native `fetch` API does not have a default timeout mechanism. Security and stability in depth require explicitly bounding the maximum duration of any external operation to protect client availability.
+
+**Prevention:** Implemented an `AbortController` coupled with a `setTimeout` in the request wrapper to force an abort signal if the `fetch` call exceeds a safe duration (default 10s), ensuring all requests fail securely and predictably rather than hanging indefinitely.
