@@ -74,3 +74,8 @@
 **Learning:** Unlike some legacy networking libraries (like `axios` or `umi-request`), the native `fetch` API does not have a default timeout mechanism. Security and stability in depth require explicitly bounding the maximum duration of any external operation to protect client availability.
 
 **Prevention:** Implemented an `AbortController` coupled with a `setTimeout` in the request wrapper to force an abort signal if the `fetch` call exceeds a safe duration (default 10s), ensuring all requests fail securely and predictably rather than hanging indefinitely.
+
+## 2026-11-11 - Information Leakage via Error Messages
+**Vulnerability:** The application's error handling utility (`getFirebaseErrorMessage`) returned raw, unhandled error strings directly to the user when an unexpected authentication error occurred. This could expose sensitive backend details, such as API keys, internal IDs, or stack traces, to the client interface.
+**Learning:** Security by default dictates that error messages shown to users should always be generic and safe. Any detailed error information needed for debugging must be securely logged internally (e.g., to the console or an error tracking service) and never echoed directly back to the client UI.
+**Prevention:** Modified `getFirebaseErrorMessage` to log unhandled errors securely to `console.error` while returning a generic fallback message ("发生未知错误，请稍后重试"). Also added a type check before calling `.includes` on the error object to prevent client-side crashes when the error is not a string.
