@@ -79,3 +79,8 @@
 **Vulnerability:** The application's error handling utility (`getFirebaseErrorMessage`) returned raw, unhandled error strings directly to the user when an unexpected authentication error occurred. This could expose sensitive backend details, such as API keys, internal IDs, or stack traces, to the client interface.
 **Learning:** Security by default dictates that error messages shown to users should always be generic and safe. Any detailed error information needed for debugging must be securely logged internally (e.g., to the console or an error tracking service) and never echoed directly back to the client UI.
 **Prevention:** Modified `getFirebaseErrorMessage` to log unhandled errors securely to `console.error` while returning a generic fallback message ("发生未知错误，请稍后重试"). Also added a type check before calling `.includes` on the error object to prevent client-side crashes when the error is not a string.
+
+## 2026-11-12 - Weak Random Number Generation in Group Tags
+**Vulnerability:** The application used `Math.random()` to generate a random 3-digit number for transaction group tags when linking transactions. `Math.random()` is not cryptographically secure and produces predictable outputs. In a financial application, predictable identifiers can lead to collision risks or predictability attacks.
+**Learning:** Even for non-critical identifiers like grouping tags, relying on `Math.random()` violates defense-in-depth principles. Secure applications should default to cryptographically strong random number generators to avoid predictability entirely.
+**Prevention:** Replaced `Math.random()` with `window.crypto.getRandomValues(new Uint32Array(1))` to ensure cryptographically secure pseudo-random number generation for the group tag suffix.

@@ -371,9 +371,9 @@ export default function StockTracker() {
     let tag = targetTx.groupTag || activeLinkSourceTx.groupTag;
     if (!tag) {
       const datePart = activeLinkSourceTx.date.replace(/-/g, "");
-      const randomPart = Math.floor(Math.random() * 1000)
-        .toString()
-        .padStart(3, "0");
+      const randomArray = new Uint32Array(1);
+      window.crypto.getRandomValues(randomArray);
+      const randomPart = (randomArray[0] % 1000).toString().padStart(3, "0");
       tag = `T-${datePart}-${randomPart}`;
     }
 
