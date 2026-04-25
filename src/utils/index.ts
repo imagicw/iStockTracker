@@ -35,18 +35,25 @@ export const getFirebaseErrorMessage = (error: any): string =>
 {
   if (error)
   {
-    if (error.includes('auth/user-not-found')) return '账号密码不正确，请重试';
-    if (error.includes('auth/wrong-password')) return '账号密码不正确，请重试';
-    if (error.includes('auth/email-already-in-use')) return '该邮箱已被注册';
-    if (error.includes('auth/invalid-email')) return '邮箱格式不正确';
-    if (error.includes('auth/weak-password')) return '密码强度太低';
-    if (error.includes('auth/network-request-failed')) return '网络请求失败，请检查网络';
-    if (error.includes('unavailable')) return '服务暂时不可用';
-    if (error.includes('auth/admin-restricted-operation')) return '操作受限';
-    if (error.includes('auth/invalid-credential')) return '账号密码不正确，请重试';
-    return `未知错误 (${error})`;
+    const errStr = typeof error === 'string' ? error : error?.message || String(error);
+    if (errStr.includes('auth/user-not-found')) return '账号密码不正确，请重试';
+    if (errStr.includes('auth/wrong-password')) return '账号密码不正确，请重试';
+    if (errStr.includes('auth/email-already-in-use')) return '该邮箱已被注册';
+    if (errStr.includes('auth/invalid-email')) return '邮箱格式不正确';
+    if (errStr.includes('auth/weak-password')) return '密码强度太低';
+    if (errStr.includes('auth/network-request-failed')) return '网络请求失败，请检查网络';
+    if (errStr.includes('unavailable')) return '服务暂时不可用';
+    if (errStr.includes('auth/admin-restricted-operation')) return '操作受限';
+    if (errStr.includes('auth/invalid-credential')) return '账号密码不正确，请重试';
+
+    // 🛡️ Sentinel: Do not leak unhandled error details to the client
+    console.error("Unhandled auth error:", {
+      message: error?.message,
+      code: error?.code,
+    });
+    return '发生未知错误，请稍后重试';
   }
-  return error?.message || '发生未知错误';
+  return '发生未知错误，请稍后重试';
 };
 
 export const sanitizeCSVField = (value: string | number | undefined | null): string =>
