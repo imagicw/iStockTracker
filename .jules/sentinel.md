@@ -84,3 +84,8 @@
 **Vulnerability:** The application used `Math.random()` to generate a random 3-digit number for transaction group tags when linking transactions. `Math.random()` is not cryptographically secure and produces predictable outputs. In a financial application, predictable identifiers can lead to collision risks or predictability attacks.
 **Learning:** Even for non-critical identifiers like grouping tags, relying on `Math.random()` violates defense-in-depth principles. Secure applications should default to cryptographically strong random number generators to avoid predictability entirely.
 **Prevention:** Replaced `Math.random()` with `window.crypto.getRandomValues(new Uint32Array(1))` to ensure cryptographically secure pseudo-random number generation for the group tag suffix.
+
+## 2026-11-13 - Missing Security Headers
+**Vulnerability:** The application was missing basic security headers (CSP, X-Frame-Options, X-Content-Type-Options, etc.), making it vulnerable to clickjacking, MIME-type sniffing, and cross-site scripting (XSS) attacks. Vercel deployment didn't have these headers configured.
+**Learning:** Security headers are an essential part of defense-in-depth and should be applied across the entire application to reduce the risk of common web vulnerabilities.
+**Prevention:** Added standard security headers (`X-Frame-Options`, `X-Content-Type-Options`, `X-XSS-Protection`, `Strict-Transport-Security`, `Referrer-Policy`, and `Permissions-Policy`) to all routes in `vercel.json` configuration.
